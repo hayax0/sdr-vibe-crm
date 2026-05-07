@@ -1,234 +1,228 @@
-import { Plus, Megaphone, MoveHorizontal as MoreHorizontal, Users, MessageSquare, TrendingUp, Play, Pause, Clock } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Progress } from "@/components/ui/progress"
-
-type CampaignStatus = "ativa" | "pausada" | "rascunho"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { Loader2, Megaphone, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Campaign {
-  id: string
-  name: string
-  description: string
-  status: CampaignStatus
-  leads: number
-  messages: number
-  responseRate: number
-  progress: number
-  startDate: string
-  segment: string
-}
-
-const campaigns: Campaign[] = [
-  {
-    id: "1",
-    name: "Prospecção Q2 - SaaS B2B",
-    description: "Abordagem focada em CTOs e VPs de Produto de empresas SaaS com 50-200 funcionários",
-    status: "ativa",
-    leads: 248,
-    messages: 1240,
-    responseRate: 18,
-    progress: 62,
-    startDate: "02/04/2026",
-    segment: "SaaS / Tech",
-  },
-  {
-    id: "2",
-    name: "Enterprise Outbound - Fintech",
-    description: "Campanha de ABM para fintechs de médio porte, foco em decisores financeiros",
-    status: "ativa",
-    leads: 87,
-    messages: 435,
-    responseRate: 24,
-    progress: 41,
-    startDate: "15/04/2026",
-    segment: "Fintech / Finance",
-  },
-  {
-    id: "3",
-    name: "Reativação de Leads Frios",
-    description: "Sequência para leads que não responderam nos últimos 60 dias",
-    status: "pausada",
-    leads: 312,
-    messages: 936,
-    responseRate: 9,
-    progress: 88,
-    startDate: "01/03/2026",
-    segment: "Todos os segmentos",
-  },
-  {
-    id: "4",
-    name: "Webinar Lead Nurturing",
-    description: "Sequência de follow-up para leads que assistiram o webinar de Março",
-    status: "rascunho",
-    leads: 0,
-    messages: 0,
-    responseRate: 0,
-    progress: 0,
-    startDate: "—",
-    segment: "Eventos / Inbound",
-  },
-]
-
-const statusConfig: Record<CampaignStatus, { label: string; variant: "default" | "secondary" | "outline"; icon: React.ReactNode }> = {
-  ativa: { label: "Ativa", variant: "default", icon: <Play className="size-3" /> },
-  pausada: { label: "Pausada", variant: "secondary", icon: <Pause className="size-3" /> },
-  rascunho: { label: "Rascunho", variant: "outline", icon: <Clock className="size-3" /> },
+  id: string;
+  name: string;
+  description: string;
+  prompt_persona: string;
 }
 
 export function Campaigns() {
-  const totalLeads = campaigns.reduce((sum, c) => sum + c.leads, 0)
-  const totalMessages = campaigns.reduce((sum, c) => sum + c.messages, 0)
-  const activeCampaigns = campaigns.filter(c => c.status === "ativa").length
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    prompt_persona: "",
+  });
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: wsData } = await supabase
+        .from("workspace_users")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .single();
+      if (wsData) setWorkspaceId(wsData.workspace_id);
+    }
+
+    const { data, error } = await supabase
+      .from("campaigns")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) setCampaigns(data);
+    setLoading(false);
+  };
+
+  const handleCreateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workspaceId) return;
+    setIsSubmitting(true);
+
+    const { error } = await supabase.from("campaigns").insert([
+      {
+        workspace_id: workspaceId,
+        name: formData.name,
+        description: formData.description,
+        prompt_persona: formData.prompt_persona,
+      },
+    ]);
+
+    setIsSubmitting(false);
+
+    if (error) {
+      alert("Erro ao criar campanha.");
+    } else {
+      setIsModalOpen(false);
+      setFormData({ name: "", description: "", prompt_persona: "" });
+      fetchInitialData();
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">Campanhas</h2>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie suas sequências de prospecção</p>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            Campanhas e IA
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure as regras e contextos para geração de mensagens
+            automáticas
+          </p>
         </div>
-        <Button>
-          <Plus className="size-4" />
-          Nova Campanha
-        </Button>
+
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="size-4 mr-1" /> Nova Campanha
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <form onSubmit={handleCreateCampaign}>
+              <DialogHeader>
+                <DialogTitle>Criar Nova Campanha</DialogTitle>
+                <DialogDescription>
+                  Defina o contexto do produto e as instruções que a IA usará
+                  para abordar o lead.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome da Campanha *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Ex: Black Friday 2026"
+                    required
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">
+                    Contexto da Oferta/Produto *
+                  </Label>
+                  <textarea
+                    id="description"
+                    required
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Ex: Estamos oferecendo o SDR Vibe com 50% OFF para os 10 primeiros clientes..."
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="prompt_persona">
+                    Tom de Voz e Regras da IA *
+                  </Label>
+                  <textarea
+                    id="prompt_persona"
+                    required
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Ex: Aja como um SDR sênior consultivo. Seja amigável, cite a empresa do lead e gere uma mensagem de no máximo 3 parágrafos."
+                    value={formData.prompt_persona}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        prompt_persona: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting || !workspaceId}>
+                  {isSubmitting ? "Salvando..." : "Salvar Campanha"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center size-9 rounded-lg bg-primary/10">
-                <Megaphone className="size-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{activeCampaigns}</p>
-                <p className="text-xs text-muted-foreground">Campanhas ativas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center size-9 rounded-lg bg-sky-500/10">
-                <Users className="size-5 text-sky-600 dark:text-sky-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalLeads.toLocaleString("pt-BR")}</p>
-                <p className="text-xs text-muted-foreground">Total de leads impactados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center size-9 rounded-lg bg-emerald-500/10">
-                <MessageSquare className="size-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalMessages.toLocaleString("pt-BR")}</p>
-                <p className="text-xs text-muted-foreground">Mensagens enviadas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Campaign List */}
-      <div className="space-y-3">
-        {campaigns.map((campaign) => {
-          const status = statusConfig[campaign.status]
-          return (
-            <Card key={campaign.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <CardTitle className="text-base">{campaign.name}</CardTitle>
-                      <Badge variant={status.variant} className="flex items-center gap-1 text-xs">
-                        {status.icon}
-                        {status.label}
-                      </Badge>
-                    </div>
-                    <CardDescription className="line-clamp-2 text-sm">
-                      {campaign.description}
-                    </CardDescription>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" className="shrink-0">
-                        <MoreHorizontal className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Editar campanha</DropdownMenuItem>
-                      <DropdownMenuItem>Ver relatório</DropdownMenuItem>
-                      <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      {campaign.status === "ativa"
-                        ? <DropdownMenuItem>Pausar campanha</DropdownMenuItem>
-                        : <DropdownMenuItem>Ativar campanha</DropdownMenuItem>
-                      }
-                      <DropdownMenuItem variant="destructive">Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Segmento</p>
-                    <p className="text-sm font-medium text-foreground mt-0.5">{campaign.segment}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Leads</p>
-                    <p className="text-sm font-medium text-foreground mt-0.5">{campaign.leads}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Mensagens</p>
-                    <p className="text-sm font-medium text-foreground mt-0.5">{campaign.messages}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Taxa de Resposta</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <TrendingUp className="size-3.5 text-emerald-500 shrink-0" />
-                      <p className="text-sm font-medium text-foreground">{campaign.responseRate}%</p>
-                    </div>
+      {/* Lista de Campanhas */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      ) : campaigns.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 border border-dashed rounded-lg bg-card/50">
+          <Megaphone className="size-12 text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-medium text-foreground">
+            Nenhuma campanha encontrada
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1 mb-4 text-center max-w-sm">
+            Crie sua primeira campanha para começar a gerar mensagens
+            personalizadas com Inteligência Artificial.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {campaigns.map((campaign) => (
+            <Card
+              key={campaign.id}
+              className="group hover:border-primary/50 transition-colors"
+            >
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Megaphone className="size-5 text-primary" />
                   </div>
                 </div>
-
-                {/* Progress */}
-                {campaign.status !== "rascunho" && (
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Progresso</p>
-                      <p className="text-xs font-medium text-foreground">{campaign.progress}%</p>
-                    </div>
-                    <Progress value={campaign.progress} className="h-1.5" />
-                  </div>
-                )}
-
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Clock className="size-3" />
-                  <span>Iniciada em {campaign.startDate}</span>
+                <h3 className="font-semibold text-lg mb-2 line-clamp-1">
+                  {campaign.name}
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                  {campaign.description}
+                </p>
+                <div className="pt-4 border-t border-border flex justify-between items-center text-xs text-muted-foreground">
+                  <span>Pronta para uso</span>
                 </div>
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
-  )
+  );
 }
