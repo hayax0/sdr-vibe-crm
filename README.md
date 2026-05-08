@@ -6,8 +6,8 @@ O **SDR Vibe** é um CRM focado em prospecção ativa, projetado para otimizar o
 
 ## Links de Acesso
 
-- **Deploy da Aplicação (Vercel):** [Inserir link de deploy aqui]
-- **Vídeo de Apresentação:** [Inserir link do vídeo aqui]
+- **Deploy da Aplicação (Vercel):** [https://sdr-vibe-crm.vercel.app/login]
+- **Vídeo de Apresentação:** [https://drive.google.com/file/d/1JqqjCCQja0U840NExAWuO5YzEsgx3NKy/view?usp=sharing]
 
 ---
 
@@ -15,7 +15,7 @@ O **SDR Vibe** é um CRM focado em prospecção ativa, projetado para otimizar o
 
 A stack tecnológica foi selecionada para garantir alta performance, tipagem estática e escalabilidade:
 
-- **Frontend:** Next.js 14, React, Tailwind CSS
+- **Frontend:** React (Vite), Tailwind CSS
 - **Linguagem:** TypeScript
 - **Componentes de UI:** Shadcn/UI, Lucide React, Recharts
 - **Backend & Banco de Dados:** Supabase (Auth, PostgreSQL DB, Edge Functions)
@@ -40,6 +40,11 @@ A camada de dados é suportada por um banco PostgreSQL relacional via Supabase. 
 **Progressão automática de leads no pipeline.**
 Para reduzir o atrito operacional e minimizar tarefas repetitivas do SDR, implementamos o conceito de 'Etapa Gatilho'. Quando um SDR gera e confirma o envio da primeira mensagem para um lead (seja via WhatsApp, LinkedIn ou Email), o sistema identifica essa ação e automaticamente move o card do lead da coluna inicial para a etapa "Tentando Contato" no funil Kanban. Essa micro-automação mantém o CRM atualizado em tempo real, refletindo a verdadeira cadência de prospecção sem exigir o arraste manual (drag-and-drop) a cada interação.
 
+
+**Desafios Encontrados e Resolução**
+Tratamento de Erros e Evolução da API LLM: Durante o desenvolvimento da integração com a Inteligência Artificial, enfrentei o desafio de falhas silenciosas na comunicação com o Google Gemini. O Deno nativo das Edge Functions não acionava o bloco catch para erros HTTP 4xx/5xx da API.
+A Solução: Refatorei o index.ts da Edge Function para forçar a validação do response.ok e a extração do errorText diretamente do body da requisição. Isso me permitiu identificar rapidamente uma descontinuidade do modelo antigo da IA e atualizar em tempo real a URL de comunicação para a versão mais estável e moderna (gemini-2.5-flash), garantindo a resiliência do sistema com um fallback seguro de respostas.
+
 ---
 
 ## Checklist de Funcionalidades Entregues
@@ -58,7 +63,7 @@ Siga os passos abaixo para rodar o projeto em sua máquina local.
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/sdr-vibe-crm.git
+https://github.com/hayax0/sdr-vibe-crm.git
 cd sdr-vibe-crm
 ```
 
@@ -78,8 +83,8 @@ Crie um arquivo `.env.local` na raiz do projeto, baseado no arquivo `.env.exampl
 
 ```env
 # Supabase (Exemplo)
-NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon_do_supabase
+VITE_SUPABASE_URL=sua_url_do_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anon_do_supabase
 ```
 
 > **Nota:** O deploy das Supabase Edge Functions, onde a chave `GEMINI_API_KEY` deve estar segura, é necessário para a funcionalidade de Inteligência Artificial.
