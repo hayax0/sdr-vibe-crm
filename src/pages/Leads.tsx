@@ -203,6 +203,8 @@ export function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [variations, setVariations] = useState<string[]>([]);
   const [currentVariationIdx, setCurrentVariationIdx] = useState(0);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
 
   useEffect(() => {
     fetchInitialData();
@@ -252,6 +254,13 @@ export function Leads() {
       .order("created_at", { ascending: false });
 
     if (!error && data) setLeads(data);
+
+    const { data: campaignsData } = await supabase
+      .from("campaigns")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (campaignsData) setCampaigns(campaignsData);
+
     setLoading(false);
   };
 
@@ -342,21 +351,29 @@ export function Leads() {
     if (error) fetchInitialData();
   };
 
-  const generateAIMessage = async (lead: Lead) => {
+  const openAiModal = (lead: Lead) => {
     setSelectedLead(lead);
+    setVariations([]);
+    setSelectedCampaignId("");
+    setIsAiModalOpen(true);
+  };
+
+  const generateAIMessage = async () => {
+    if (!selectedLead) return;
+    if (!selectedCampaignId) {
+      toast.error("Por favor, selecione uma campanha.");
+      return;
+    }
+    
     const toastId = toast.loading("Gerando variações de mensagens...");
     try {
-      const { data: campaign } = await supabase
-        .from("campaigns")
-        .select("*")
-        .limit(1)
-        .single();
+      const campaign = campaigns.find((c) => c.id === selectedCampaignId);
 
       // Chamada para a Edge Function
       const { data, error } = await supabase.functions.invoke(
         "generate-message",
         {
-          body: { lead, campaign },
+          body: { lead: selectedLead, campaign },
         }
       );
 
@@ -365,7 +382,6 @@ export function Leads() {
       setVariations(data.variations || [data.message]);
       setCurrentVariationIdx(0);
       toast.dismiss(toastId);
-      setIsAiModalOpen(true);
     } catch (err: any) {
       toast.dismiss(toastId);
       toast.error(
@@ -655,7 +671,7 @@ export function Leads() {
                                   Editar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => generateAIMessage(lead)}
+                                  onClick={() => openAiModal(lead)}
                                   className="text-primary font-medium cursor-pointer"
                                 >
                                   <Sparkles className="size-4 mr-2" /> Gerar
@@ -703,7 +719,7 @@ export function Leads() {
             <DialogTitle className="flex justify-between items-center">
               <span className="flex items-center gap-2">
                 <Sparkles className="size-5 text-primary" />
-                Sugestão de IA ({currentVariationIdx + 1}/{variations.length})
+                Sugestão de IA {variations.length > 0 ? `(${currentVariationIdx + 1}/${variations.length})` : ""}
               </span>
               {variations.length > 1 && (
                 <div className="flex gap-1 pr-6">
@@ -735,15 +751,40 @@ export function Leads() {
               )}
             </DialogTitle>
           </DialogHeader>
-          <div className="relative group pt-2">
-            <Textarea
-              className="min-h-[220px] resize-none bg-muted/30 text-sm leading-relaxed"
-              value={variations[currentVariationIdx] || ""}
-              readOnly
-            />
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Selecionar Campanha</Label>
+              <div className="flex gap-2">
+                <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Escolha uma campanha..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campaigns.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={generateAIMessage} disabled={!selectedCampaignId}>
+                  <Sparkles className="size-4 mr-2" /> Gerar
+                </Button>
+              </div>
+            </div>
+
+            {variations.length > 0 && (
+              <div className="relative group">
+                <Textarea
+                  className="min-h-[220px] resize-none bg-muted/30 text-sm leading-relaxed"
+                  value={variations[currentVariationIdx] || ""}
+                  readOnly
+                />
+              </div>
+            )}
           </div>
           <DialogFooter className="mt-2">
-            <Button onClick={handleSendMessage} className="w-full">
+            <Button onClick={handleSendMessage} className="w-full" disabled={variations.length === 0}>
               <Copy className="size-4 mr-2" /> Copiar e Mover para 'Tentando
               Contato'
             </Button>

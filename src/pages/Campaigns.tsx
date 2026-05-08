@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Megaphone, Plus } from "lucide-react";
+import { Loader2, Megaphone, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface Campaign {
@@ -85,6 +85,16 @@ export function Campaigns() {
       setIsModalOpen(false);
       setFormData({ name: "", description: "", prompt_persona: "" });
       fetchInitialData();
+    }
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta campanha?")) return;
+    const { error } = await supabase.from("campaigns").delete().eq("id", id);
+    if (!error) {
+      setCampaigns(campaigns.filter((c) => c.id !== id));
+    } else {
+      alert("Erro ao excluir campanha.");
     }
   };
 
@@ -208,6 +218,14 @@ export function Campaigns() {
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <Megaphone className="size-5 text-primary" />
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
+                    onClick={() => handleDeleteCampaign(campaign.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
                 <h3 className="font-semibold text-lg mb-2 line-clamp-1">
                   {campaign.name}
