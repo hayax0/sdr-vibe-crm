@@ -6,8 +6,8 @@ O **SDR Vibe** é um CRM focado em prospecção ativa, projetado para otimizar o
 
 ## Links de Acesso
 
-- **Deploy da Aplicação (Vercel):** [https://sdr-vibe-crm.vercel.app/login]
-- **Vídeo de Apresentação:** [https://drive.google.com/file/d/1JqqjCCQja0U840NExAWuO5YzEsgx3NKy/view?usp=sharing]
+- **Deploy da aplicação:** [sdr-vibe-crm.vercel.app](https://sdr-vibe-crm.vercel.app/login)
+- **Vídeo de apresentação:** [assistir no Google Drive](https://drive.google.com/file/d/1JqqjCCQja0U840NExAWuO5YzEsgx3NKy/view?usp=sharing)
 
 ---
 
@@ -63,7 +63,7 @@ Siga os passos abaixo para rodar o projeto em sua máquina local.
 ### 1. Clonar o repositório
 
 ```bash
-https://github.com/hayax0/sdr-vibe-crm.git
+git clone https://github.com/hayax0/sdr-vibe-crm.git
 cd sdr-vibe-crm
 ```
 
@@ -99,7 +99,7 @@ yarn dev
 pnpm dev
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000) no seu navegador para visualizar a aplicação.
+Acesse [http://localhost:5173](http://localhost:5173) no seu navegador para visualizar a aplicação.
 
 ---
 
@@ -107,4 +107,4 @@ _Documentação desenvolvida como parte da Prova Técnica_.
 
 ---
 
-**Autor:** Caio Campos - Desenvolvedor Full Stack / Software Engineering Student.
+**Autor:** Caio Campos - Desenvolvedor Full Stack e estudante de Engenharia de Software.
